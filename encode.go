@@ -5,8 +5,13 @@ import (
 	"bytes"
 	"encoding"
 	"io"
+	"io/ioutil"
 	"reflect"
 	"strconv"
+	"strings"
+
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
 )
 
 // Marshal returns the fixed-width encoding of v.
@@ -157,10 +162,14 @@ func structEncoder(v reflect.Value) ([]byte, error) {
 			ok   bool
 		)
 		spec.startPos, spec.endPos, ok = parseTag(f.Tag.Get("fixed"))
+		spec.codePage = f.Tag.Get("cp")
 		if !ok {
 			continue
 		}
 		spec.value, err = newValueEncoder(f.Type)(v.Field(i))
+		if strings.TrimSpace(spec.codePage) != "" {
+			spec.value = utf8ToCodePage(spec.codePage, spec.value)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -169,9 +178,20 @@ func structEncoder(v reflect.Value) ([]byte, error) {
 	return encodeSpecs(specs), nil
 }
 
+func utf8ToCodePage(codePage string, b []byte) []byte {
+	e, _ := charset.Lookup(codePage)
+	reader := transform.NewReader(bytes.NewReader(b), e.NewEncoder())
+	nb, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return b
+	}
+	return nb
+}
+
 type fieldSpec struct {
 	startPos, endPos int
 	value            []byte
+	codePage         string
 }
 
 func encodeSpecs(specs []fieldSpec) []byte {
