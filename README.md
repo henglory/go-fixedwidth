@@ -14,22 +14,34 @@ Positions start at 1. The interval is inclusive. Fields without tags are ignored
 ### Encode
 ```go
 // define some data to encode
-people := []struct {
-    ID        int     `fixed:"1,5"`
-    FirstName string  `fixed:"6,15"`
-    LastName  string  `fixed:"16,25"`
-    Grade     float64 `fixed:"26,30"`
-}{
-    {1, "Ian", "Lopshire", 99.5},
-}
+    people := []struct {
+		ID        int     `fixed:"1,5"`
+		FirstName string  `fixed:"6,15"`
+		LastName  string  `fixed:"16,25"`
+		Remark    string  `fixed:"26,32" cp:"Windows-874"`
+		Grade     float64 `fixed:"33,38"`
+	}{
+		{1, "Ian", "Lopshire", "ทดสอบ", 99.5},
+	}
 
-data, err := fixedwidth.Marshal(people)
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Printf("%s", data)
+	data, err := fixedwidth.Marshal(people)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ms874Reader := bytes.NewBuffer(data)
+	reader, err := charset.NewReaderLabel("Windows-874", ms874Reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+	nb, err := ioutil.ReadAll(reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%s", nb)
 // Output:
-// 1    Ian       Lopshire  99.50
+// 1    Ian       Lopshire  ทดสอบ  99.50
 ```
 
 ### Decode
