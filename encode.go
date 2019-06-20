@@ -5,13 +5,11 @@ import (
 	"bytes"
 	"encoding"
 	"io"
-	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"golang.org/x/net/html/charset"
-	"golang.org/x/text/transform"
+	"github.com/henglory/go-fixedwidth/charset"
 )
 
 // Marshal returns the fixed-width encoding of v.
@@ -168,7 +166,7 @@ func structEncoder(v reflect.Value) ([]byte, error) {
 		}
 		spec.value, err = newValueEncoder(f.Type)(v.Field(i))
 		if strings.TrimSpace(spec.codePage) != "" {
-			spec.value = utf8ToCodePage(spec.codePage, spec.value)
+			spec.value = charset.EncodeUTF8(spec.codePage, spec.value)
 		}
 		if err != nil {
 			return nil, err
@@ -176,16 +174,6 @@ func structEncoder(v reflect.Value) ([]byte, error) {
 		specs = append(specs, spec)
 	}
 	return encodeSpecs(specs), nil
-}
-
-func utf8ToCodePage(codePage string, b []byte) []byte {
-	e, _ := charset.Lookup(codePage)
-	reader := transform.NewReader(bytes.NewReader(b), e.NewEncoder())
-	nb, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return b
-	}
-	return nb
 }
 
 type fieldSpec struct {

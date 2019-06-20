@@ -6,12 +6,11 @@ import (
 	"encoding"
 	"errors"
 	"io"
-	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"golang.org/x/net/html/charset"
+	"github.com/henglory/go-fixedwidth/charset"
 )
 
 // Unmarshal parses fixed width encoded data and stores the
@@ -187,7 +186,7 @@ func structSetter(v reflect.Value, raw []byte) error {
 		}
 		rawValue := rawValueFromLine(raw, startPos, endPos)
 		if strings.TrimSpace(codePage) != "" {
-			rawValue = covertCpToUtf8(codePage, rawValue)
+			rawValue = charset.DecodeUTF8(codePage, rawValue)
 		}
 		err := newValueSetter(sf.Type)(fv, rawValue)
 		if err != nil {
@@ -195,20 +194,6 @@ func structSetter(v reflect.Value, raw []byte) error {
 		}
 	}
 	return nil
-}
-
-func covertCpToUtf8(codePage string, b []byte) []byte {
-	newCodeReader := bytes.NewBuffer(b)
-	reader, err := charset.NewReaderLabel(codePage, newCodeReader)
-	if err != nil {
-		return b
-	}
-
-	nb, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return b
-	}
-	return nb
 }
 
 func unknownSetter(v reflect.Value, raw []byte) error {
