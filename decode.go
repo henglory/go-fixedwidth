@@ -144,7 +144,7 @@ func rawValueFromLine(line []byte, startPos, endPos int) []byte {
 	if endPos > len(line) {
 		endPos = len(line)
 	}
-	return bytes.TrimSpace(line[startPos-1 : endPos])
+	return line[startPos-1 : endPos]
 }
 
 type valueSetter func(v reflect.Value, raw []byte) error
@@ -195,6 +195,7 @@ func structSetter(v reflect.Value, raw []byte) error {
 		if strings.TrimSpace(codePage) != "" {
 			rawValue = charset.DecodeUTF8(codePage, rawValue)
 		}
+		rawValue = bytes.TrimSpace(rawValue)
 		err := newValueSetter(sf.Type)(fv, rawValue)
 		if err != nil {
 			return &UnmarshalTypeError{string(rawValue), sf.Type, t.Name(), sf.Name, err}
