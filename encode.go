@@ -160,15 +160,19 @@ func structEncoder(v reflect.Value) ([]byte, error) {
 		if !spec.ok {
 			continue
 		}
-
+		mock := bytes.Repeat([]byte(" "), spec.endPos-spec.startPos+1)
 		val, err := newValueEncoder(v.Field(i).Type())(v.Field(i))
+
 		if strings.TrimSpace(spec.codePage) != "" {
+			mock = charset.EncodeUTF8(spec.codePage, mock)
 			val = charset.EncodeUTF8(spec.codePage, val)
+
 		}
+		copy(mock, val)
 		if err != nil {
 			return nil, err
 		}
-		copy(dst[spec.startPos-1:spec.endPos:spec.endPos], val)
+		copy(dst[spec.startPos-1:spec.endPos:spec.endPos], mock)
 	}
 	return dst, nil
 }

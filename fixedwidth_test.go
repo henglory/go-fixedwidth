@@ -70,6 +70,9 @@ func TestThaiMarshal(t *testing.T) {
 	if string(str[5:21]) != "นายทดสอบ ทดสอบ  " {
 		t.Errorf("%s", string(str[5:21]))
 	}
+	if string(str[21:30]) != "Lopshire " {
+		t.Errorf("%s", string(str[21:30]))
+	}
 
 }
 
