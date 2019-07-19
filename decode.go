@@ -1,7 +1,6 @@
 package fixedwidth
 
 import (
-	"bufio"
 	"bytes"
 	"encoding"
 	"errors"
@@ -17,19 +16,19 @@ import (
 // result in the value pointed to by v. If v is nil or not a
 // pointer, Unmarshal returns an InvalidUnmarshalError.
 func Unmarshal(data []byte, v interface{}) error {
-	return NewDecoder(bytes.NewReader(data)).Decode(v)
+	return NewDecoder(data).Decode(v)
 }
 
 // A Decoder reads and decodes fixed width data from an input stream.
 type Decoder struct {
-	data *bufio.Reader
+	data []byte
 	done bool
 }
 
 // NewDecoder returns a new decoder that reads from r.
-func NewDecoder(r io.Reader) *Decoder {
+func NewDecoder(b []byte) *Decoder {
 	return &Decoder{
-		data: bufio.NewReader(r),
+		data: b,
 	}
 }
 
@@ -89,9 +88,12 @@ func (d *Decoder) Decode(v interface{}) error {
 	}
 
 	if reflect.Indirect(reflect.ValueOf(v)).Kind() == reflect.Slice {
-		return d.readLines(reflect.ValueOf(v).Elem())
+		return errors.New("Not support slice")
 	}
 
+	if len(d.data) == 0 {
+		return io.EOF
+	}
 	err, ok := d.readLine(reflect.ValueOf(v))
 	if d.done && err == nil && !ok {
 		// d.done means we've reached the end of the file. err == nil && !ok
@@ -102,39 +104,26 @@ func (d *Decoder) Decode(v interface{}) error {
 	return err
 }
 
-func (d *Decoder) readLines(v reflect.Value) (err error) {
-	ct := v.Type().Elem()
-	for {
-		nv := reflect.New(ct).Elem()
-		err, ok := d.readLine(nv)
-		if err != nil {
-			return err
-		}
-		if ok {
-			v.Set(reflect.Append(v, nv))
-		}
-		if d.done {
-			break
-		}
-	}
-	return nil
-}
+// func (d *Decoder) readLines(v reflect.Value) (err error) {
+// 	ct := v.Type().Elem()
+// 	for {
+// 		nv := reflect.New(ct).Elem()
+// 		err, ok := d.readLine(nv)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if ok {
+// 			v.Set(reflect.Append(v, nv))
+// 		}
+// 		if d.done {
+// 			break
+// 		}
+// 	}
+// 	return nil
+// }
 
 func (d *Decoder) readLine(v reflect.Value) (err error, ok bool) {
-	var line []byte
-	line, err = d.data.ReadBytes('\n')
-	if err != nil && err != io.EOF {
-		return err, false
-	}
-	if err == io.EOF {
-		d.done = true
-
-		if line == nil || len(line) <= 0 || line[0] == '\n' {
-			// skip last empty lines
-			return nil, false
-		}
-	}
-	return newValueSetter(v.Type())(v, line), true
+	return newValueSetter(v.Type())(v, d.data), true
 }
 
 func rawValueFromLine(line []byte, startPos, endPos int) []byte {

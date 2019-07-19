@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding"
+	"errors"
 	"io"
 	"reflect"
 	"strconv"
@@ -88,32 +89,16 @@ func (e *Encoder) Encode(i interface{}) (err error) {
 	}
 	if v.Kind() == reflect.Slice {
 		// encode each slice element to a line
-		err = e.writeLines(v)
-	} else {
-		// this is a single object so encode the original vale to a line
-		err = e.writeLine(reflect.ValueOf(i))
+		err = errors.New("Not support slice")
+		return
 	}
+	// this is a single object so encode the original vale to a line
+	err = e.writeLine(reflect.ValueOf(i))
+
 	if err != nil {
 		return err
 	}
 	return e.w.Flush()
-}
-
-func (e *Encoder) writeLines(v reflect.Value) error {
-	for i := 0; i < v.Len(); i++ {
-		err := e.writeLine(v.Index(i))
-		if err != nil {
-			return err
-		}
-
-		if i != v.Len()-1 {
-			_, err := e.w.Write([]byte("\n"))
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func (e *Encoder) writeLine(v reflect.Value) (err error) {

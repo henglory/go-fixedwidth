@@ -1,7 +1,6 @@
 package fixedwidth
 
 import (
-	"bytes"
 	"encoding"
 	"fmt"
 	"io"
@@ -12,7 +11,7 @@ import (
 
 func ExampleUnmarshal() {
 	// define the format
-	var people []struct {
+	var people struct {
 		ID        int     `fixed:"1,5"`
 		FirstName string  `fixed:"6,15"`
 		LastName  string  `fixed:"16,25"`
@@ -20,23 +19,14 @@ func ExampleUnmarshal() {
 	}
 
 	// define some fixed-with data to parse
-	data := []byte("" +
-		"1    Ian       Lopshire  99.50" + "\n" +
-		"2    John      Doe       89.50" + "\n" +
-		"3    Jane      Doe       79.50" + "\n")
+	data := []byte("1    Ian       Lopshire  99.50")
 
 	err := Unmarshal(data, &people)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%+v\n", people[0])
-	fmt.Printf("%+v\n", people[1])
-	fmt.Printf("%+v\n", people[2])
-	// Output:
-	//{ID:1 FirstName:Ian LastName:Lopshire Grade:99.5}
-	//{ID:2 FirstName:John LastName:Doe Grade:89.5}
-	//{ID:3 FirstName:Jane LastName:Doe Grade:79.5}
+	fmt.Printf("%+v\n", people)
 }
 
 func TestUnmarshal(t *testing.T) {
@@ -56,34 +46,30 @@ func TestUnmarshal(t *testing.T) {
 	}{
 		{
 			name:     "Slice Case (no trailing new line)",
-			rawValue: []byte("foo  123  1.2  bar" + "\n" + "bar  321  2.1  foo"),
+			rawValue: []byte("foo  123  1.2  bar"),
 			target:   &[]allTypes{},
 			expected: &[]allTypes{
 				{"foo", 123, 1.2, EncodableString{"bar", nil}},
-				{"bar", 321, 2.1, EncodableString{"foo", nil}},
 			},
-			shouldErr: false,
+			shouldErr: true,
 		},
 		{
 			name:     "Slice Case (trailing new line)",
-			rawValue: []byte("foo  123  1.2  bar" + "\n" + "bar  321  2.1  foo" + "\n"),
+			rawValue: []byte("foo  123  1.2  bar"),
 			target:   &[]allTypes{},
 			expected: &[]allTypes{
 				{"foo", 123, 1.2, EncodableString{"bar", nil}},
-				{"bar", 321, 2.1, EncodableString{"foo", nil}},
 			},
-			shouldErr: false,
+			shouldErr: true,
 		},
 		{
 			name:     "Slice Case (blank line mid file)",
-			rawValue: []byte("foo  123  1.2  bar" + "\n" + "\n" + "bar  321  2.1  foo" + "\n"),
+			rawValue: []byte("foo  123  1.2  bar"),
 			target:   &[]allTypes{},
 			expected: &[]allTypes{
 				{"foo", 123, 1.2, EncodableString{"bar", nil}},
-				{"", 0, 0, EncodableString{"", nil}},
-				{"bar", 321, 2.1, EncodableString{"foo", nil}},
 			},
-			shouldErr: false,
+			shouldErr: true,
 		},
 		{
 			name:      "Basic Struct Case",
@@ -150,7 +136,7 @@ func TestUnmarshal(t *testing.T) {
 			{"Invalid Unmarshal Nil", nil, true},
 			{"Invalid Unmarshal Not Pointer 1", struct{}{}, true},
 			{"Invalid Unmarshal Not Pointer 2", []struct{}{}, true},
-			{"Valid Unmarshal slice", &[]struct{}{}, false},
+			{"Valid Unmarshal slice", &[]struct{}{}, true},
 			{"Valid Unmarshal struct", &struct{}{}, true},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
@@ -225,7 +211,7 @@ func TestNewValueSetter(t *testing.T) {
 // Verify the behavior of Decoder.Decode at the end of a file. See
 // https://github.com/ianlopshire/go-fixedwidth/issues/6 for more details.
 func TestDecode_EOF(t *testing.T) {
-	d := NewDecoder(bytes.NewReader([]byte("")))
+	d := NewDecoder([]byte(""))
 	type S struct {
 		Field1 string `fixed:"1,1"`
 		Field2 string `fixed:"2,2"`
@@ -237,16 +223,12 @@ func TestDecode_EOF(t *testing.T) {
 		t.Errorf("Decode should have returned an EOF error. Returned: %v", err)
 	}
 
-	d = NewDecoder(bytes.NewReader([]byte("ABC\n")))
+	d = NewDecoder([]byte("ABC"))
 	err = d.Decode(&s)
 	if err != nil {
 		t.Errorf("Unexpected error from decode")
 	}
 	if !reflect.DeepEqual(&s, &S{Field1: "A", Field2: "B", Field3: "C"}) {
 		t.Errorf("Unexpected result from Decode: %#v", s)
-	}
-	err = d.Decode(&s)
-	if err != io.EOF {
-		t.Errorf("Decode should have returned an EOF error. Returned: %v", err)
 	}
 }

@@ -3,22 +3,21 @@ package fixedwidth
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
 	"reflect"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 func ExampleMarshal() {
 	// define some data to encode
-	people := []struct {
+	people := struct {
 		ID        int     `fixed:"1,5"`
 		FirstName string  `fixed:"6,15"`
 		LastName  string  `fixed:"16,25"`
 		Grade     float64 `fixed:"26,30"`
-	}{
-		{1, "Ian", "Lopshire", 99.5},
-	}
+	}{1, "Ian", "Lopshire", 99.5}
 
 	data, err := Marshal(people)
 	if err != nil {
@@ -48,8 +47,8 @@ func TestMarshal(t *testing.T) {
 		shouldErr bool
 	}{
 		{"single line", H{"foo", 1}, []byte("foo  1    "), false},
-		{"multiple line", []H{{"foo", 1}, {"bar", 2}}, []byte("foo  1    \nbar  2    "), false},
-		{"empty slice", []H{}, nil, false},
+		{"multiple line", []H{{"foo", 1}, {"bar", 2}}, []byte("foo  1    \nbar  2    "), true},
+		{"empty slice", []H{}, nil, true},
 		{"pointer", &H{"foo", 1}, []byte("foo  1    "), false},
 		{"nil", nil, nil, false},
 		{"invalid type", true, nil, true},
