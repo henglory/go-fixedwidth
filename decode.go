@@ -184,7 +184,7 @@ func structSetter(v reflect.Value, raw []byte) error {
 		if strings.TrimSpace(codePage) != "" {
 			rawValue = charset.DecodeUTF8(codePage, rawValue)
 		}
-		rawValue = bytes.TrimSpace(rawValue)
+		//rawValue = bytes.TrimSpace(rawValue)
 		err := newValueSetter(sf.Type)(fv, rawValue)
 		if err != nil {
 			return &UnmarshalTypeError{string(rawValue), sf.Type, t.Name(), sf.Name, err}
@@ -232,11 +232,13 @@ func ptrSetter(t reflect.Type) valueSetter {
 }
 
 func stringSetter(v reflect.Value, raw []byte) error {
+	raw = bytes.TrimSpace(raw)
 	v.SetString(string(raw))
 	return nil
 }
 
 func intSetter(v reflect.Value, raw []byte) error {
+	raw = bytes.TrimSpace(raw)
 	if len(raw) < 1 {
 		return nil
 	}
@@ -250,6 +252,7 @@ func intSetter(v reflect.Value, raw []byte) error {
 
 func floatSetter(bitSize int) valueSetter {
 	return func(v reflect.Value, raw []byte) error {
+		raw = bytes.TrimSpace(raw)
 		if len(raw) < 1 {
 			return nil
 		}
